@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0b0c;
+  --foreground: #fafafa;
+}
+
+body {
+  @apply bg-gray-900 text-white m-0 p-0;
+}
+
+#root {
+  @apply h-screen;
+}
+
+.pattern-highlight {
+  @apply bg-yellow-200 bg-opacity-20 border-b border-yellow-500 border-opacity-50;
+}
+
+
+.ant-collapse-content-box {
+  padding: 0px 16px 0px 16px !important;
+}
+
+/* Ant Design dark theme overrides */
+.ant-layout {
+  @apply bg-gray-900;
+}
+
+.ant-layout-sider {
+  @apply bg-gray-800 border-r border-gray-700;
+}
+
+.ant-menu-dark {
+  @apply bg-transparent;
+}
+
+.ant-form-item-label>label {
+  @apply text-white;
+}
+
+.ant-checkbox-wrapper {
+  @apply text-white;
+}
+
+.ant-menu-inline .ant-menu-item {
+  @apply h-auto;
+}

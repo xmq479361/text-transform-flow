@@ -1,0 +1,32 @@
+.App {
+    font-family: Arial, sans-serif;
+    margin: 2rem;
+}
+
+h1 {
+    color: #333;
+}
+
+input {
+    margin: 1rem 0;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.dynamic-highlight {
+    background-color: yellow;
+    font-weight: bold;
+}
+
+.CodeMirror {
+    font-family: monospace;
+}
+
+
+.code-editor {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: "Courier New", Courier, monospace;
+}
