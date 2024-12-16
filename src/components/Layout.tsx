@@ -1,31 +1,96 @@
 "use client";
 
-import { Layout, Menu, Button, message } from "antd";
-import { useState, useEffect } from "react";
-import { CopyOutlined } from "@ant-design/icons";
+import { Layout as AntLayout, Button, message, Switch } from "antd";
+import { useState, useEffect, useCallback } from "react";
+import { CopyOutlined, SettingOutlined } from "@ant-design/icons";
 import Sidebar from "./Sidebar";
 import Editor from "./Editor";
 import Output from "./Output";
-import { ProcessingFlow, EditorContent, ProcessingRule } from "../types";
+import {
+  ProcessingFlow,
+  EditorContent,
+  ProcessingRule,
+  LayoutSizeProps,
+  LayoutSizes,
+} from "../types";
+import { Resizable } from "re-resizable";
 
-const { Content, Sider } = Layout;
+const { Content } = AntLayout;
 
-export default function AppLayout() {
-  const [siderWidth, setSiderWidth] = useState(300);
+const siderWidthConfig: LayoutSizeProps = {
+  min: 15,
+  default: 20,
+  max: 40,
+};
+const editorWidth: LayoutSizeProps = {
+  min: 30,
+  default: 45,
+  max: 60,
+};
+const outputWidth: LayoutSizeProps = {
+  min: 20,
+  default: 35,
+  max: 50,
+};
+const DEFAULT_LAYOUT: LayoutSizes = {
+  siderWidthPercent: 20, // 20% of total width
+  editorWidthPercent: 45, // 45% of total width
+  outputWidthPercent: 35, // 35% of total width
+};
+
+interface AppLayoutProps {
+  isDarkMode: boolean;
+  setIsDarkMode: (isDark: boolean) => void;
+}
+
+export default function AppLayout({
+  isDarkMode,
+  setIsDarkMode,
+}: AppLayoutProps) {
+  const [layout, setLayout] = useState<LayoutSizes>(() => {
+    const savedLayout = localStorage.getItem("layoutP");
+    console.log("savedLayout", savedLayout);
+    return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
+  });
   const [flows, setFlows] = useState<ProcessingFlow[]>([]);
   const [highlightPatterns, setHighlightPatterns] = useState<string[]>([]);
-  const [selectedFlow, setSelectedFlow] = useState<ProcessingFlow | null>(null);
-  const [editorContent, setEditorContent] = useState<EditorContent>({
-    text: "",
-    language: "javascript",
+  const [selectedFlow, setSelectedFlow] = useState<ProcessingFlow | null>(
+    () => {
+      const savedFlow = localStorage.getItem("selectedFlow");
+      return savedFlow ? JSON.parse(savedFlow) : null;
+    }
+  );
+  const [editorContent, setEditorContent] = useState<EditorContent>(() => {
+    const savedContent = localStorage.getItem("editorContent");
+    return savedContent
+      ? JSON.parse(savedContent)
+      : {
+          text: "",
+          language: "javascript",
+        };
   });
   const [processedText, setProcessedText] = useState("");
+  const [isRealTimeProcessing, setIsRealTimeProcessing] = useState(true);
+  const [containerWidth, setContainerWidth] = useState(800);
+  const [isResizing, setIsResizing] = useState(false);
 
-  // Load flows from localStorage on component mount
+  useEffect(() => {
+    const updateContainerWidth = () => {
+      const root = document.getElementById("root");
+      if (root) {
+        console.log("updateContainerWidth", root.clientWidth);
+        setContainerWidth(root.clientWidth);
+      }
+    };
+
+    updateContainerWidth();
+    window.addEventListener("resize", updateContainerWidth);
+    return () => window.removeEventListener("resize", updateContainerWidth);
+  }, [layout]);
+
   useEffect(() => {
     try {
       const savedFlows = localStorage.getItem("flows");
-      console.log("restore Flows", savedFlows);
       if (savedFlows) {
         setFlows(JSON.parse(savedFlows));
       }
@@ -38,13 +103,24 @@ export default function AppLayout() {
   const handleSetFlows = (flows: ProcessingFlow[]) => {
     setFlows(flows);
     try {
-      console.log("save flows", flows);
       localStorage.setItem("flows", JSON.stringify(flows));
     } catch (error) {
       console.error("Error saving flows to localStorage:", error);
       message.error("Failed to save flows");
     }
   };
+
+  useEffect(() => {
+    localStorage.setItem("layoutP", JSON.stringify(layout));
+  }, [layout]);
+
+  useEffect(() => {
+    localStorage.setItem("selectedFlow", JSON.stringify(selectedFlow));
+  }, [selectedFlow]);
+
+  useEffect(() => {
+    localStorage.setItem("editorContent", JSON.stringify(editorContent));
+  }, [editorContent]);
 
   const handleFlowChange = (
     flowId: string,
@@ -77,9 +153,16 @@ export default function AppLayout() {
       )
     );
     if (selectedFlow && selectedFlow.id === flowId) {
-      var rule = selectedFlow.rules.find((rule) => rule.id === ruleId);
-      if (rule) {
-        setHighlightPatterns([rule.pattern]);
+      console.log("setHighlightPatterns", updates.pattern, updates);
+      if (updates.pattern) {
+        console.log("setHighlightPatterns", updates.pattern, updates);
+        setHighlightPatterns([updates.pattern]);
+      } else if (updates.enabled != null) {
+        var rule = selectedFlow.rules.find((rule) => rule.id === ruleId);
+        if (rule) {
+          rule = { ...rule, ...updates };
+          setHighlightPatterns([rule.enabled == true ? rule.pattern : ""]);
+        }
       }
       setSelectedFlow({
         ...selectedFlow,
@@ -105,6 +188,7 @@ export default function AppLayout() {
       id: Date.now().toString(),
       pattern: "",
       replacement: "",
+      description: "",
       enabled: true,
       global: true,
       caseSensitive: false,
@@ -150,54 +234,184 @@ export default function AppLayout() {
       .catch(() => message.error("Failed to copy output"));
   };
 
+  const getPixelWidth = (percentage: number) => {
+    return (percentage / 100) * containerWidth;
+  };
+
+  const handleResizeStop = (
+    direction: "left" | "right",
+    panelType: keyof LayoutSizes,
+    delta: number
+  ) => {
+    const deltaPercent = (delta / containerWidth) * 100;
+
+    setLayout((prev) => {
+      const newLayout = { ...prev };
+      console.log("handleResizeStop", "prev", prev);
+      if (panelType === "siderWidthPercent") {
+        newLayout.siderWidthPercent = Math.max(
+          siderWidthConfig.min,
+          Math.min(siderWidthConfig.max, prev.siderWidthPercent + deltaPercent)
+        );
+        newLayout.editorWidthPercent = Math.max(
+          editorWidth.min,
+          Math.min(
+            editorWidth.max,
+            100 - newLayout.siderWidthPercent - prev.outputWidthPercent
+          )
+        );
+        newLayout.outputWidthPercent =
+          100 - newLayout.siderWidthPercent - newLayout.editorWidthPercent;
+      } else if (panelType === "editorWidthPercent") {
+        newLayout.editorWidthPercent = Math.max(
+          editorWidth.min,
+          Math.min(editorWidth.max, prev.editorWidthPercent + deltaPercent)
+        );
+        newLayout.outputWidthPercent = Math.max(
+          outputWidth.min,
+          Math.min(
+            outputWidth.max,
+            100 - newLayout.siderWidthPercent - newLayout.editorWidthPercent
+          )
+        );
+      }
+
+      return newLayout;
+    });
+
+    setIsResizing(false);
+  };
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  const toggleRealTimeProcessing = () => {
+    setIsRealTimeProcessing(!isRealTimeProcessing);
+  };
   return (
-    <Layout className="min-h-screen">
-      <Sider width={siderWidth} className="overflow-auto" theme="dark">
-        <Sidebar
-          flows={flows}
-          selectedFlow={selectedFlow}
-          onFlowSelect={setSelectedFlow}
-          onFlowChange={handleFlowChange}
-          onRuleChange={handleRuleChange}
-          onAddFlow={handleAddFlow}
-          onAddRule={handleAddRule}
-          onDeleteRule={handleDeleteRule}
+    // <Layout className={`min-h-screen flex-row ${isDarkMode ? "dark" : ""}`}>
+    <AntLayout
+      className={`app-container ${isDarkMode ? "theme-dark" : "theme-light"} `}
+    >
+      <Resizable
+        size={{
+          width: getPixelWidth(layout.siderWidthPercent),
+          height: "100%",
+        }}
+        // maxWidth={getPixelWidth(siderWidthConfig.max)}
+        // minWidth={getPixelWidth(siderWidthConfig.min)}
+        onResizeStart={() => setIsResizing(true)}
+        onResizeStop={(e, direction, ref, d) => {
+          handleResizeStop("right", "siderWidthPercent", d.width);
+        }}
+        enable={{ right: true }}
+        className="relative panel flex-row min-h-screen h-full"
+      >
+        <div className="scroll-container sidebar h-full">
+          <Sidebar
+            flows={flows}
+            selectedFlow={selectedFlow}
+            onFlowSelect={setSelectedFlow}
+            onFlowChange={handleFlowChange}
+            onRuleChange={handleRuleChange}
+            onAddFlow={handleAddFlow}
+            onAddRule={handleAddRule}
+            onDeleteRule={handleDeleteRule}
+          />
+        </div>
+        <div
+          className={`resizable-handle right ${isResizing ? "active" : ""}`}
         />
-      </Sider>
-      <Layout>
-        <Content className="flex flex-col">
-          <div className="flex-1 flex">
-            <div className="flex-1 flex flex-col">
-              <Menu mode="horizontal" theme="dark">
-                <Menu.Item key="currentFlow">
-                  当前处理流: {selectedFlow ? selectedFlow.name : "无"}
-                </Menu.Item>
-              </Menu>
-              <div className="flex-1 overflow-auto">
-                <Editor
-                  content={editorContent}
-                  onChange={setEditorContent}
-                  highlightPatterns={highlightPatterns}
-                />
+      </Resizable>
+      {/* </Sider> */}
+      <AntLayout>
+        <Content className="flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-row h-full">
+            <Resizable
+              size={{
+                width: getPixelWidth(layout.editorWidthPercent),
+                height: "100%",
+              }}
+              // maxWidth={getPixelWidth(editorWidth.max)}
+              // minWidth={getPixelWidth(editorWidth.min)}
+              onResizeStart={() => setIsResizing(true)}
+              onResizeStop={(e, direction, ref, d) => {
+                handleResizeStop("right", "editorWidthPercent", d.width);
+              }}
+              enable={{ right: true }}
+              className="relative panel h-full"
+            >
+              <div className="flex-1 flex flex-col h-full">
+                <div className="panel-header p-2 flex items-center justify-between">
+                  <span>当前处理流: {selectedFlow?.name || "无"}</span>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checkedChildren="Dark"
+                      unCheckedChildren="Light"
+                      checked={isDarkMode}
+                      onChange={toggleDarkMode}
+                    />
+                    <Switch
+                      checkedChildren="Real-time"
+                      unCheckedChildren="Manual"
+                      checked={isRealTimeProcessing}
+                      onChange={toggleRealTimeProcessing}
+                    />
+                  </div>
+                </div>
+                <div className="flex-1 scroll-container">
+                  <Editor
+                    content={editorContent}
+                    onChange={setEditorContent}
+                    highlightPatterns={highlightPatterns}
+                    isDarkMode={isDarkMode}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="w-[400px] flex flex-col">
-              <Menu mode="horizontal" theme="dark">
-                <Menu.Item key="copy" onClick={handleCopyOutput}>
-                  <CopyOutlined /> 复制
-                </Menu.Item>
-              </Menu>
-              <div className="flex-1 overflow-auto">
-                <Output
-                  content={editorContent}
-                  flow={selectedFlow}
-                  onProcessedTextChange={setProcessedText}
-                />
+              <div
+                className={`resizable-handle right ${
+                  isResizing ? "active" : ""
+                }`}
+              />
+            </Resizable>
+            {(editorContent.text || !isRealTimeProcessing) && (
+              <div
+                className="panel"
+                style={{
+                  width: `${getPixelWidth(layout.outputWidthPercent)}px`,
+                }}
+              >
+                <div className="panel-header p-2 flex items-center">
+                  <Button
+                    icon={<CopyOutlined />}
+                    onClick={handleCopyOutput}
+                    className="theme-input"
+                  >
+                    复制
+                  </Button>
+                  {!isRealTimeProcessing && (
+                    <Button
+                      onClick={() => setProcessedText(editorContent.text)}
+                      className="theme-input ml-2"
+                    >
+                      处理
+                    </Button>
+                  )}
+                </div>
+                <div className="flex-1 scroll-container h-full overflow-x-scroll">
+                  <Output
+                    content={editorContent}
+                    flow={selectedFlow}
+                    onProcessedTextChange={setProcessedText}
+                    isRealTimeProcessing={isRealTimeProcessing}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Content>
-      </Layout>
-    </Layout>
+      </AntLayout>
+    </AntLayout>
   );
 }

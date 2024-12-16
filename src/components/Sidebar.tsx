@@ -60,8 +60,17 @@ export default function Sidebar({
             onRuleChange(flow.id, rule.id, { enabled: e.target.checked })
           }
         />
-        <span className="ml-2 text-white">启用</span>
+        <span className={`ml-2`}>启用</span>
       </div>
+      <Form.Item className="mb-2">
+        <Input
+          placeholder="描述"
+          value={rule.description}
+          onChange={(e) =>
+            onRuleChange(flow.id, rule.id, { description: e.target.value })
+          }
+        />
+      </Form.Item>
       <Form.Item className="mb-2">
         <Input
           placeholder="查找模式"
@@ -87,7 +96,7 @@ export default function Sidebar({
             onRuleChange(flow.id, rule.id, { global: e.target.checked })
           }
         >
-          <span className="text-white">全局</span>
+          <span>全局</span>
         </Checkbox>
         <Checkbox
           className="ml-4"
@@ -96,14 +105,17 @@ export default function Sidebar({
             onRuleChange(flow.id, rule.id, { caseSensitive: e.target.checked })
           }
         >
-          <span className="text-white">区分大小写</span>
+          <span>区分大小写</span>
         </Checkbox>
       </div>
     </Form>
   );
 
   return (
-    <div className="h-full flex flex-col bg-gray-800">
+    <div
+      className={`w-full h-full flex flex-col`}
+      // style={{ paddingBottom: "20px" }}
+    >
       <div className="p-4">
         <Input
           placeholder="新处理流名称"
@@ -122,34 +134,34 @@ export default function Sidebar({
       <Collapse
         accordion
         ghost
-        expandIconPosition="right"
-        className="bg-gray-800 border-0 padding-0"
         onChange={handleCollapseChange}
-        style={{ width: 300, padding: 0 }}
+        style={{ padding: 0 }}
       >
         {flows.map((flow) => (
           <Panel
             key={flow.id}
             header={
               <span
-                className="text-white font-semibold cursor-pointer"
+                className={`font-semibold cursor-pointer`}
                 onClick={() => onFlowSelect(flow)}
               >
                 {flow.name}
               </span>
             }
-            className="bg-gray-800 border-0"
+            className="border-0"
           >
             <Collapse accordion bordered={false} ghost>
               {flow.rules.map((rule) => (
                 <Panel
                   key={rule.id}
-                  header={rule.pattern + " => " + rule.replacement}
-                  className="bg-gray-800 border-0"
+                  header={
+                    rule.description || rule.pattern + " => " + rule.replacement
+                  }
+                  className="border-0"
                   extra={
                     <DeleteOutlined
                       onClick={() => onDeleteRule(flow.id, rule.id)}
-                      className="text-white cursor-pointer"
+                      className={`cursor-pointer`}
                       style={{ fontSize: 16 }}
                     />
                   }
@@ -162,7 +174,7 @@ export default function Sidebar({
             <Button
               onClick={() => onAddRule(flow.id)}
               icon={<PlusOutlined />}
-              className="w-full text-white"
+              className="w-full"
             >
               添加规则
             </Button>

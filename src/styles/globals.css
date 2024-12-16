@@ -2,35 +2,177 @@
 @tailwind components;
 @tailwind utilities;
 
+#root {
+  height: 100vh;
+  width: 100vw;
+}
+
 :root {
+  overflow: hidden;
   --background: #0a0b0c;
   --foreground: #fafafa;
+  /* Light theme variables */
+  --light-bg-primary: #ffffff;
+  --light-bg-secondary: #f5f5f5;
+  --light-text-primary: #000000;
+  --light-text-secondary: #666666;
+  --light-border: #e5e5e5;
+
+  /* Dark theme variables */
+  --dark-bg-primary: #1e1e1e;
+  --dark-bg-secondary: #252526;
+  --dark-text-primary: #ffffff;
+  --dark-text-secondary: #cccccc;
+  --dark-border: #404040;
+}
+
+/* 主题相关样式 */
+.theme-light {
+  --bg-primary: var(--light-bg-primary);
+  --bg-secondary: var(--light-bg-secondary);
+  --text-primary: var(--light-text-primary);
+  --text-secondary: var(--light-text-secondary);
+  --border-color: var(--light-border);
+}
+
+.theme-dark {
+  --bg-primary: var(--dark-bg-primary);
+  --bg-secondary: var(--dark-bg-secondary);
+  --text-primary: var(--dark-text-primary);
+  --text-secondary: var(--dark-text-secondary);
+  --border-color: var(--dark-border);
+}
+
+.theme-light span,
+pre {
+  @apply text-black;
+}
+
+.theme-dark span,
+pre {
+  @apply text-blue-200;
 }
 
 body {
-  @apply bg-gray-900 text-white m-0 p-0;
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
-#root {
-  @apply h-screen;
-}
 
 .pattern-highlight {
   @apply bg-yellow-200 bg-opacity-20 border-b border-yellow-500 border-opacity-50;
 }
 
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* 拖拽块样式 */
+.react-resizable-handle {
+  position: absolute;
+  width: 10px;
+  height: 100%;
+  bottom: 0;
+  right: -5px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 4px;
+  height: 30px;
+  background-color: var(--border-color);
+  border-radius: 2px;
+  transition: background-color 0.3s;
+}
+
+.react-resizable-handle:hover::after {
+  background-color: #555;
+}
+
+.resizable-handle:hover,
+.resizable-handle.active {
+  opacity: 1;
+}
+
+.resizable-handle.right {
+  right: 0;
+}
+
+.resizable-handle.left {
+  left: 0;
+}
+
+.ant-collapse-header {
+  padding: 10px 4px !important;
+}
+
+.ant-collapse-header-text {
+  display: inline-block;
+  /* 设置为内联块 */
+  white-space: nowrap;
+  /* 强制内容在一行显示 */
+  overflow: hidden;
+  /* 超出部分隐藏 */
+  text-overflow: ellipsis;
+  /* 超出部分以省略号显示 */
+  vertical-align: top;
+  /* 修复对齐问题（可选） */
+}
+
+/* Panel styling */
+.panel {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+.panel-header {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* 独立滚动区域 */
+.scroll-container {
+  overflow: auto scroll;
+}
+
+/* Theme-specific form elements */
+.theme-input {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.theme-input:focus {
+  border-color: var(--text-secondary);
+  outline: none;
+}
 
 .ant-collapse-content-box {
   padding: 0px 16px 0px 16px !important;
-}
-
-/* Ant Design dark theme overrides */
-.ant-layout {
-  @apply bg-gray-900;
-}
-
-.ant-layout-sider {
-  @apply bg-gray-800 border-r border-gray-700;
 }
 
 .ant-menu-dark {
@@ -47,4 +189,27 @@ body {
 
 .ant-menu-inline .ant-menu-item {
   @apply h-auto;
+}
+
+/* .ant-layout-content {
+  @apply overflow-auto h-full;
+} */
+
+/* 应用主题变量 */
+.app-container {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+.sidebar {
+  background-color: var(--bg-secondary);
+}
+
+/* 输入框和其他需要变化的元素样式 */
+.theme-specific-element {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
