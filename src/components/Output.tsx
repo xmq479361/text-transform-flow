@@ -17,6 +17,16 @@ export default function Output({
 }: OutputProps) {
   const [processedText, setProcessedText] = useState("");
 
+  const unescapeString = (str: string): string => {
+    return str
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\r/g, "\r")
+      .replace(/\\'/g, "'")
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+  };
+
   const processText = useCallback(
     debounce((text: string, currentFlow: ProcessingFlow | null) => {
       if (!currentFlow || !text) {
@@ -34,7 +44,7 @@ export default function Output({
             rule.caseSensitive ? "" : "i"
           }`;
           const regex = new RegExp(rule.pattern, flags);
-          result = result.replace(regex, rule.replacement);
+          result = unescapeString(result.replace(regex, rule.replacement));
         } catch (error) {
           console.error("Invalid regex pattern:", error);
         }
