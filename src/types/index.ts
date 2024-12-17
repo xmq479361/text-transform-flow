@@ -5,6 +5,7 @@ export interface ProcessingRule {
   description: string;
   enabled: boolean;
   global: boolean;
+  extractOnly: boolean;
   caseSensitive: boolean;
 }
 

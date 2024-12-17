@@ -14,6 +14,7 @@ import {
   LayoutSizes,
 } from "../types";
 import { Resizable } from "re-resizable";
+import { DragDropContext } from 'react-beautiful-dnd'
 
 const { Content } = AntLayout;
 
@@ -228,6 +229,17 @@ export default function AppLayout({
     }
     message.success("Rule deleted");
   };
+  const handleReorderRules = (flowId: string, startIndex: number, endIndex: number) => {
+    setFlows(flows.map(flow => {
+      if (flow.id === flowId) {
+        const newRules = Array.from(flow.rules)
+        const [reorderedItem] = newRules.splice(startIndex, 1)
+        newRules.splice(endIndex, 0, reorderedItem)
+        return { ...flow, rules: newRules }
+      }
+      return flow
+    }))
+  }
 
   const handleCopyOutput = () => {
     navigator.clipboard
@@ -319,6 +331,7 @@ export default function AppLayout({
             onAddFlow={handleAddFlow}
             onAddRule={handleAddRule}
             onDeleteRule={handleDeleteRule}
+            onReorderRules={handleReorderRules}
           />
         </div>
         <div
