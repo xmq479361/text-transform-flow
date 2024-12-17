@@ -17,13 +17,12 @@ import {
 } from "@ant-design/icons";
 import { ProcessingFlow, ProcessingRule } from "../types";
 
-const { Panel } = Collapse;
-
 interface SidebarProps {
   flows: ProcessingFlow[];
   selectedFlow: ProcessingFlow | null;
   onFlowSelect: (flow: ProcessingFlow | null) => void;
   onFlowChange: (flowId: string, updates: Partial<ProcessingFlow>) => void;
+  onFlowDelete: (flowId: string) => void;
   onRuleChange: (
     flowId: string,
     ruleId: string,
@@ -37,18 +36,23 @@ interface SidebarProps {
     startIndex: number,
     endIndex: number
   ) => void;
+  setHighlightRules: (rules: ProcessingRule[]) => void;
 }
 
 export default function Sidebar({
   flows,
   onFlowSelect,
+  onFlowChange,
+  onFlowDelete,
   onRuleChange,
   onAddFlow,
   onAddRule,
   onDeleteRule,
   onReorderRules,
+  setHighlightRules,
 }: SidebarProps) {
   const [newFlowName, setNewFlowName] = useState("");
+
   const handleAddFlow = () => {
     if (newFlowName) {
       var id = Date.now().toString();
@@ -65,14 +69,28 @@ export default function Sidebar({
     }
     return `${rule.pattern} -> ${rule.replacement}`;
   };
-  const handleCollapseChange = (key: string | string[]) => {
-    const flowId = key[0];
+  const handleFlowCollapseChange = (keys: string | string[]) => {
+    const flowId = keys[0];
     const flow = flows.find((flow) => flow.id === flowId);
-    console.log("handleCollapseChange", key, flowId, flow, flows);
+    console.log("handleFlowCollapseChange", keys, flowId, flow, flows);
     if (flow) {
       onFlowSelect(flow);
     } else {
       onFlowSelect(null);
+    }
+  };
+  const handleRuleCollapseChange = (
+    flow: ProcessingFlow,
+    keys: string | string[]
+  ) => {
+    console.log("handleRuleCollapseChange", keys, flow.id, flow, flows);
+    if (keys == null || keys.length == 0) {
+      onFlowSelect(flow);
+    } else {
+      const rule = flow.rules.find((rule) => rule.id === keys[0]);
+      if (rule) {
+        setHighlightRules([rule]);
+      }
     }
   };
 
@@ -154,6 +172,96 @@ export default function Sidebar({
     onReorderRules(flowId, startIndex, endIndex);
   };
 
+  const ruleItems = (flow: ProcessingFlow) => {
+    return flow.rules.map((rule, index) => ({
+      key: rule.id,
+      label: (
+        <Draggable key={rule.id} draggableId={rule.id} index={index}>
+          {(provided) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+            >
+              {getRuleSummary(rule)}
+            </div>
+          )}
+        </Draggable>
+      ),
+      extra: (
+        <div className="flex items-center">
+          <DeleteOutlined
+            onClick={() => onDeleteRule(flow.id, rule.id)}
+            className={`cursor-pointer`}
+            style={{ fontSize: 16 }}
+          />
+          <Checkbox
+            style={{ margin: "0px 5px" }}
+            checked={rule.enabled}
+            onChange={(e) =>
+              onRuleChange(flow.id, rule.id, {
+                enabled: e.target.checked,
+              })
+            }
+          />
+        </div>
+      ),
+      children: renderRuleForm(flow, rule),
+    }));
+  };
+  const flowItems = flows.map((flow) => ({
+    key: flow.id,
+    label: (
+      <span
+        className="text-white font-semibold cursor-pointer"
+        onClick={() => onFlowSelect(flow)}
+      >
+        {flow.name}
+      </span>
+    ),
+    extra: (
+      <div className="flex items-center">
+        <DeleteOutlined
+          onClick={() => onFlowDelete(flow.id)}
+          className={`cursor-pointer`}
+          style={{ fontSize: 16 }}
+        />
+        <Checkbox
+          style={{ margin: "0px 5px" }}
+          checked={flow.enabled}
+          onChange={(e) =>
+            onFlowChange(flow.id, {
+              enabled: e.target.checked,
+            })
+          }
+        />
+      </div>
+    ),
+    children: (
+      <Droppable droppableId={flow.id}>
+        {(provided) => (
+          <div {...provided.droppableProps} ref={provided.innerRef}>
+            <Collapse
+              accordion
+              ghost
+              // activeKey={activeRuleKeys[flow.id] || []}
+              onChange={(keys) => handleRuleCollapseChange(flow, keys)}
+              items={ruleItems(flow)}
+            />
+            {provided.placeholder}
+            <Button
+              onClick={() => onAddRule(flow.id)}
+              icon={<PlusOutlined />}
+              className="w-full text-white mt-2"
+            >
+              添加规则
+            </Button>
+          </div>
+        )}
+      </Droppable>
+    ),
+  }));
+
   return (
     <div className={`w-full h-full flex flex-col`}>
       <div className="panel-header">
@@ -171,157 +279,15 @@ export default function Sidebar({
           }
         />
       </div>
-      <DragDropContext onDragEnd={onDragEnd}>
-        {flows.map((flow) => (
-          <Droppable droppableId={`flow-${flow.id}`} key={flow.id}>
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef}>
-                <Collapse
-                  key={flow.id}
-                  accordion
-                  ghost
-                  onChange={handleCollapseChange}
-                >
-                  <Panel
-                    key={`flow-panel-${flow.id}`}
-                    header={
-                      <span
-                        className={`font-semibold cursor-pointer`}
-                        onClick={() => onFlowSelect(flow)}
-                      >
-                        {flow.name}
-                      </span>
-                    }
-                    className="border-0"
-                  >
-                    {flow.rules.map((rule, index) => (
-                      <Draggable
-                        key={`rule-${rule.id}`}
-                        draggableId={rule.id}
-                        index={index}
-                      >
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <Collapse
-                              key={rule.id}
-                              accordion
-                              bordered={false}
-                              ghost
-                            >
-                              <Panel
-                                header={getRuleSummary(rule)}
-                                key={rule.id}
-                                extra={
-                                  <div className="flex items-center ml-2 ">
-                                    <DeleteOutlined
-                                      onClick={() =>
-                                        onDeleteRule(flow.id, rule.id)
-                                      }
-                                      className={`cursor-pointer`}
-                                      style={{ fontSize: 16 }}
-                                    />
-                                    <Checkbox
-                                      className="mr-2 ml-2 "
-                                      checked={rule.enabled}
-                                      onChange={(e) =>
-                                        onRuleChange(flow.id, rule.id, {
-                                          enabled: e.target.checked,
-                                        })
-                                      }
-                                    />
-                                  </div>
-                                }
-                              >
-                                {renderRuleForm(flow, rule)}
-                              </Panel>
-                            </Collapse>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    <div>
-                      <Button
-                        onClick={() => onAddRule(flow.id)}
-                        icon={<PlusOutlined />}
-                        className="w-full mt-4"
-                      >
-                        添加规则
-                      </Button>
-                    </div>
-                  </Panel>
-                </Collapse>
-              </div>
-            )}
-          </Droppable>
-        ))}
-      </DragDropContext>
-      {/* <Collapse
-        accordion
-        ghost
-        onChange={handleCollapseChange}
-        style={{ padding: 0 }}
-      >
-        {flows.map((flow) => (
-          <Panel
-            key={flow.id}
-            header={
-              <span
-                className={`font-semibold cursor-pointer`}
-                onClick={() => onFlowSelect(flow)}
-              >
-                {flow.name}
-              </span>
-            }
-            className="border-0"
-          >
-            <Collapse accordion bordered={false} ghost>
-              {flow.rules.map((rule) => (
-                <Panel
-                  key={rule.id}
-                  header={
-                    rule.description || rule.pattern + " => " + rule.replacement
-                  }
-                  className="border-0"
-                  extra={
-                    <div className="flex items-center">
-                      <DeleteOutlined
-                        onClick={() => onDeleteRule(flow.id, rule.id)}
-                        className={`cursor-pointer`}
-                        style={{ fontSize: 16 }}
-                      />
-                      <Checkbox
-                        style={{ margin: "0px 5px" }}
-                        checked={rule.enabled}
-                        onChange={(e) =>
-                          onRuleChange(flow.id, rule.id, {
-                            enabled: e.target.checked,
-                          })
-                        }
-                      />
-                    </div>
-                  }
-                >
-                  {renderRuleForm(flow, rule)}
-                </Panel>
-              ))}
-            </Collapse>
 
-            <Button
-              onClick={() => onAddRule(flow.id)}
-              icon={<PlusOutlined />}
-              className="w-full mt-4"
-            >
-              添加规则
-            </Button>
-          </Panel>
-        ))}
-      </Collapse>
-      </DragDropContext> */}
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Collapse
+          accordion
+          ghost
+          onChange={(keys) => handleFlowCollapseChange(keys)}
+          items={flowItems}
+        />
+      </DragDropContext>
     </div>
   );
 }

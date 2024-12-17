@@ -7,7 +7,7 @@ import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import cssWorker from "monaco-editor/esm/vs/language/css/css.worker?worker";
 import htmlWorker from "monaco-editor/esm/vs/language/html/html.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
-import { EditorContent } from "../types";
+import { EditorContent, ProcessingRule } from "../types";
 import { debounce } from "lodash";
 
 // @ts-ignore
@@ -32,14 +32,14 @@ self.MonacoEnvironment = {
 interface EditorProps {
   content: EditorContent;
   onChange: (content: EditorContent) => void;
-  highlightPatterns: string[];
+  highlightRules: ProcessingRule[];
   isDarkMode: boolean;
 }
 
 export default function Editor({
   content,
   onChange,
-  highlightPatterns,
+  highlightRules,
   isDarkMode,
 }: EditorProps) {
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -88,15 +88,15 @@ export default function Editor({
     const model = editorRef.current.getModel();
     if (!model) return;
 
-    const newDecorations = highlightPatterns.flatMap((pattern) => {
-      console.log("pattern", pattern);
-      if (!pattern) return [];
+    const newDecorations = highlightRules.flatMap((rule) => {
+      console.log("pattern", rule.pattern);
+      if (!rule.pattern || !rule.pattern.trim() || !rule.enabled) return [];
       try {
         const matches = model.findMatches(
-          pattern,
+          rule.pattern,
           true,
-          false,
           true,
+          rule.caseSensitive,
           null,
           true
         );
@@ -104,7 +104,7 @@ export default function Editor({
           range: match.range,
           options: {
             inlineClassName: "pattern-highlight",
-            hoverMessage: { value: `Matches pattern: ${pattern}` },
+            hoverMessage: { value: `Matches pattern: ${rule.pattern}` },
           },
         }));
       } catch (error) {
@@ -118,7 +118,7 @@ export default function Editor({
       newDecorations
     );
     setDecorations(decorationIds);
-  }, [highlightPatterns, content.text]);
+  }, [highlightRules, content.text]);
 
   useEffect(() => {
     if (editorRef.current) {

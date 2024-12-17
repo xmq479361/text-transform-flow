@@ -58,8 +58,12 @@ body {
 }
 
 
-.pattern-highlight {
-  @apply bg-yellow-200 bg-opacity-20 border-b border-yellow-500 border-opacity-50;
+.theme-light .pattern-highlight {
+  @apply bg-blue-500 bg-opacity-20 border-b border-blue-500 border-opacity-50;
+}
+
+.theme-dark .pattern-highlight {
+  @apply bg-yellow-500 bg-opacity-20 border-b border-yellow-500 border-opacity-50;
 }
 
 /* 自定义滚动条样式 */
@@ -185,22 +189,6 @@ body {
   @apply bg-transparent;
 }
 
-.ant-form-item-label>label {
-  @apply text-white;
-}
-
-.ant-checkbox-wrapper {
-  @apply text-white;
-}
-
-.ant-menu-inline .ant-menu-item {
-  @apply h-auto;
-}
-
-/* .ant-layout-content {
-  @apply overflow-auto h-full;
-} */
-
 /* 应用主题变量 */
 .app-container {
   background-color: var(--bg-primary);
@@ -208,14 +196,4 @@ body {
   display: flex;
   flex-direction: row;
   height: 100vh;
-}
-
-.sidebar {
-  background-color: var(--bg-secondary);
-}
-
-/* 输入框和其他需要变化的元素样式 */
-.theme-specific-element {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
 }

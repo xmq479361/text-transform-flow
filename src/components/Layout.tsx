@@ -1,8 +1,8 @@
 "use client";
 
 import { Layout as AntLayout, Button, message, Switch } from "antd";
-import { useState, useEffect, useCallback } from "react";
-import { CopyOutlined, SettingOutlined } from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { CopyOutlined } from "@ant-design/icons";
 import Sidebar from "./Sidebar";
 import Editor from "./Editor";
 import Output from "./Output";
@@ -14,7 +14,6 @@ import {
   LayoutSizes,
 } from "../types";
 import { Resizable } from "re-resizable";
-import { DragDropContext } from 'react-beautiful-dnd'
 
 const { Content } = AntLayout;
 
@@ -42,22 +41,26 @@ const DEFAULT_LAYOUT: LayoutSizes = {
 interface AppLayoutProps {
   isDarkMode: boolean;
   setIsDarkMode: (isDark: boolean) => void;
+  flows: ProcessingFlow[];
+  onFlowsChange: (flows: ProcessingFlow[]) => void;
 }
 
 export default function AppLayout({
   isDarkMode,
   setIsDarkMode,
+  flows,
+  onFlowsChange,
 }: AppLayoutProps) {
   const [layout, setLayout] = useState<LayoutSizes>(() => {
     const savedLayout = localStorage.getItem("layoutP");
     console.log("savedLayout", savedLayout);
     return savedLayout ? JSON.parse(savedLayout) : DEFAULT_LAYOUT;
   });
-  const [flows, setFlows] = useState<ProcessingFlow[]>([]);
-  const [highlightPatterns, setHighlightPatterns] = useState<string[]>([]);
+  const [highlightRules, setHighlightRules] = useState<ProcessingRule[]>([]);
   const [selectedFlow, setSelectedFlow] = useState<ProcessingFlow | null>(
     () => {
       const savedFlow = localStorage.getItem("selectedFlow");
+
       return savedFlow ? JSON.parse(savedFlow) : null;
     }
   );
@@ -90,28 +93,6 @@ export default function AppLayout({
   }, [layout]);
 
   useEffect(() => {
-    try {
-      const savedFlows = localStorage.getItem("flows");
-      if (savedFlows) {
-        setFlows(JSON.parse(savedFlows));
-      }
-    } catch (error) {
-      console.error("Error loading flows from localStorage:", error);
-      message.error("Failed to load saved flows");
-    }
-  }, []);
-
-  const handleSetFlows = (flows: ProcessingFlow[]) => {
-    setFlows(flows);
-    try {
-      localStorage.setItem("flows", JSON.stringify(flows));
-    } catch (error) {
-      console.error("Error saving flows to localStorage:", error);
-      message.error("Failed to save flows");
-    }
-  };
-
-  useEffect(() => {
     localStorage.setItem("layoutP", JSON.stringify(layout));
   }, [layout]);
 
@@ -128,20 +109,34 @@ export default function AppLayout({
     updates: Partial<ProcessingFlow>
   ) => {
     console.log("handleFlowChange", flowId, updates);
-    handleSetFlows(
+    onFlowsChange(
       flows.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow))
     );
     if (selectedFlow && selectedFlow.id === flowId) {
       setSelectedFlow({ ...selectedFlow, ...updates });
     }
   };
+
+  const handleDeleteFlow = (flowId: string) => {
+    onFlowsChange(flows.filter((flow) => flow.id !== flowId));
+  };
+
+  const handleFlowSelect = (flow: ProcessingFlow | null) => {
+    setSelectedFlow(flow);
+    if (flow?.enabled && flow?.rules) {
+      setHighlightRules(flow.rules.filter((rule) => rule.enabled));
+    } else {
+      setHighlightRules([]);
+    }
+  };
+
   const handleRuleChange = (
     flowId: string,
     ruleId: string,
     updates: Partial<ProcessingRule>
   ) => {
     console.log("handleRuleChange", flowId, ruleId, updates);
-    handleSetFlows(
+    onFlowsChange(
       flows.map((flow) =>
         flow.id === flowId
           ? {
@@ -155,16 +150,13 @@ export default function AppLayout({
     );
     if (selectedFlow && selectedFlow.id === flowId) {
       console.log("setHighlightPatterns", updates.pattern, updates);
-      if (updates.pattern) {
-        console.log("setHighlightPatterns", updates.pattern, updates);
-        setHighlightPatterns([updates.pattern]);
-      } else if (updates.enabled != null) {
+      if (updates.pattern || updates.enabled != null) {
         var rule = selectedFlow.rules.find((rule) => rule.id === ruleId);
         if (rule) {
           rule = { ...rule, ...updates };
           var pattern = rule.enabled == true ? rule.pattern : "";
           console.log("setHighlightPatterns", pattern);
-          setHighlightPatterns([pattern]);
+          setHighlightRules([rule]);
         }
       }
       setSelectedFlow({
@@ -180,9 +172,10 @@ export default function AppLayout({
     const newFlow: ProcessingFlow = {
       id: id,
       name: flowName,
+      enabled: true,
       rules: [],
     };
-    handleSetFlows([...flows, newFlow]);
+    onFlowsChange([...flows, newFlow]);
     message.success(`New flow "${flowName}" added`);
   };
 
@@ -194,9 +187,10 @@ export default function AppLayout({
       description: "",
       enabled: true,
       global: true,
+      extractOnly: false,
       caseSensitive: false,
     };
-    handleSetFlows(
+    onFlowsChange(
       flows.map((flow) =>
         flow.id === flowId ? { ...flow, rules: [...flow.rules, newRule] } : flow
       )
@@ -214,7 +208,7 @@ export default function AppLayout({
   };
 
   const handleDeleteRule = (flowId: string, ruleId: string) => {
-    handleSetFlows(
+    onFlowsChange(
       flows.map((flow) =>
         flow.id === flowId
           ? { ...flow, rules: flow.rules.filter((rule) => rule.id !== ruleId) }
@@ -229,17 +223,34 @@ export default function AppLayout({
     }
     message.success("Rule deleted");
   };
-  const handleReorderRules = (flowId: string, startIndex: number, endIndex: number) => {
-    setFlows(flows.map(flow => {
+  const handleReorderRules = (
+    flowId: string,
+    startIndex: number,
+    endIndex: number
+  ) => {
+    const updatedFlows = flows.map((flow) => {
       if (flow.id === flowId) {
-        const newRules = Array.from(flow.rules)
-        const [reorderedItem] = newRules.splice(startIndex, 1)
-        newRules.splice(endIndex, 0, reorderedItem)
-        return { ...flow, rules: newRules }
+        const newRules = Array.from(flow.rules);
+        const [reorderedItem] = newRules.splice(startIndex, 1);
+        newRules.splice(endIndex, 0, reorderedItem);
+        return {
+          ...flow,
+          rules: newRules.map((rule, index) => ({ ...rule, order: index })),
+        };
       }
-      return flow
-    }))
-  }
+      return flow;
+    });
+    onFlowsChange(updatedFlows);
+    if (selectedFlow && selectedFlow.id === flowId) {
+      const newRules = Array.from(selectedFlow.rules);
+      const [reorderedItem] = newRules.splice(startIndex, 1);
+      newRules.splice(endIndex, 0, reorderedItem);
+      setSelectedFlow({
+        ...selectedFlow,
+        rules: newRules.map((rule, index) => ({ ...rule, order: index })),
+      });
+    }
+  };
 
   const handleCopyOutput = () => {
     navigator.clipboard
@@ -310,28 +321,29 @@ export default function AppLayout({
       <Resizable
         size={{
           width: getPixelWidth(layout.siderWidthPercent),
-          height: "100%",
         }}
         maxWidth={getPixelWidth(siderWidthConfig.max)}
         minWidth={getPixelWidth(siderWidthConfig.min)}
         onResizeStart={() => setIsResizing(true)}
-        onResizeStop={(e, direction, ref, d) => {
+        onResizeStop={(_e, _direction, _ref, d) => {
           handleResizeStop("right", "siderWidthPercent", d.width);
         }}
         enable={{ right: true }}
-        className="relative panel flex-row min-h-screen h-full"
+        className="relative panel flex-row h-full"
       >
         <div className="scroll-container sidebar h-full">
           <Sidebar
             flows={flows}
             selectedFlow={selectedFlow}
-            onFlowSelect={setSelectedFlow}
+            onFlowSelect={handleFlowSelect}
             onFlowChange={handleFlowChange}
+            onFlowDelete={handleDeleteFlow}
             onRuleChange={handleRuleChange}
             onAddFlow={handleAddFlow}
             onAddRule={handleAddRule}
             onDeleteRule={handleDeleteRule}
             onReorderRules={handleReorderRules}
+            setHighlightRules={setHighlightRules}
           />
         </div>
         <div
@@ -339,90 +351,86 @@ export default function AppLayout({
         />
       </Resizable>
       <AntLayout>
-        <Content className="flex flex-col h-full overflow-hidden">
-          <div className="flex-1 flex flex-row h-full">
-            <Resizable
-              size={{
-                width: getPixelWidth(layout.editorWidthPercent),
-                height: "100%",
+        <Content className="flex  flex flex-row overflow-hidden">
+          <Resizable
+            size={{
+              width: getPixelWidth(layout.editorWidthPercent),
+              height: "100%",
+            }}
+            maxWidth={getPixelWidth(editorWidth.max)}
+            minWidth={getPixelWidth(editorWidth.min)}
+            onResizeStart={() => setIsResizing(true)}
+            onResizeStop={(e, _direction, _ref, d) => {
+              handleResizeStop("right", "editorWidthPercent", d.width);
+            }}
+            enable={{ right: true }}
+            className="relative panel h-full"
+          >
+            <div className="flex-1 flex flex-col h-full">
+              <div className="panel-header p-2 flex items-center justify-between">
+                <span>当前处理流: {selectedFlow?.name || "无"}</span>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checkedChildren="Dark"
+                    unCheckedChildren="Light"
+                    checked={isDarkMode}
+                    onChange={toggleDarkMode}
+                  />
+                  {/* <Switch
+                    checkedChildren="实时处理"
+                    unCheckedChildren="Manual"
+                    checked={isRealTimeProcessing}
+                    onChange={toggleRealTimeProcessing}
+                  /> */}
+                </div>
+              </div>
+              <div className="flex-1 scroll-container">
+                <Editor
+                  content={editorContent}
+                  onChange={setEditorContent}
+                  highlightRules={highlightRules}
+                  isDarkMode={isDarkMode}
+                />
+              </div>
+            </div>
+            <div
+              className={`resizable-handle right ${isResizing ? "active" : ""}`}
+            />
+          </Resizable>
+          {(editorContent.text || !isRealTimeProcessing) && (
+            <div
+              className="panel flex flex-col"
+              style={{
+                width: `${getPixelWidth(layout.outputWidthPercent)}px`,
               }}
-              maxWidth={getPixelWidth(editorWidth.max)}
-              minWidth={getPixelWidth(editorWidth.min)}
-              onResizeStart={() => setIsResizing(true)}
-              onResizeStop={(e, direction, ref, d) => {
-                handleResizeStop("right", "editorWidthPercent", d.width);
-              }}
-              enable={{ right: true }}
-              className="relative panel h-full"
             >
-              <div className="flex-1 flex flex-col h-full">
-                <div className="panel-header p-2 flex items-center justify-between">
-                  <span>当前处理流: {selectedFlow?.name || "无"}</span>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checkedChildren="Dark"
-                      unCheckedChildren="Light"
-                      checked={isDarkMode}
-                      onChange={toggleDarkMode}
-                    />
-                    <Switch
-                      checkedChildren="Real-time"
-                      unCheckedChildren="Manual"
-                      checked={isRealTimeProcessing}
-                      onChange={toggleRealTimeProcessing}
-                    />
-                  </div>
-                </div>
-                <div className="flex-1 scroll-container">
-                  <Editor
-                    content={editorContent}
-                    onChange={setEditorContent}
-                    highlightPatterns={highlightPatterns}
-                    isDarkMode={isDarkMode}
-                  />
-                </div>
-              </div>
-              <div
-                className={`resizable-handle right ${
-                  isResizing ? "active" : ""
-                }`}
-              />
-            </Resizable>
-            {(editorContent.text || !isRealTimeProcessing) && (
-              <div
-                className="panel flex flex-col"
-                style={{
-                  width: `${getPixelWidth(layout.outputWidthPercent)}px`,
-                }}
-              >
-                <div className="panel-header p-2 flex items-center">
+              <div className="panel-header p-2 flex items-center">
+                <Button
+                  icon={<CopyOutlined />}
+                  onClick={handleCopyOutput}
+                  className="theme-input"
+                >
+                  复制
+                </Button>
+                {/* {!isRealTimeProcessing && (
                   <Button
-                    icon={<CopyOutlined />}
-                    onClick={handleCopyOutput}
-                    className="theme-input"
+                    onClick={() => setProcessedText(editorContent.text)}
+                    className="theme-input ml-2"
                   >
-                    复制
+                    处理
                   </Button>
-                  {!isRealTimeProcessing && (
-                    <Button
-                      onClick={() => setProcessedText(editorContent.text)}
-                      className="theme-input ml-2"
-                    >
-                      处理
-                    </Button>
-                  )}
-                </div>
-                <div className="flex-1 scroll-container h-full overflow-x-scroll">
-                  <Output
-                    content={editorContent}
-                    flow={selectedFlow}
-                    onProcessedTextChange={setProcessedText}
-                    isRealTimeProcessing={isRealTimeProcessing}
-                  />
-                </div>
+                )} */}
               </div>
-            )}
-          </div>
+              <div className="flex-1 scroll-container h-full overflow-x-scroll">
+                <Output
+                  content={editorContent}
+                  flow={selectedFlow}
+                  onProcessedTextChange={setProcessedText}
+                  isRealTimeProcessing={isRealTimeProcessing}
+                />
+              </div>
+            </div>
+          )}
         </Content>
       </AntLayout>
     </AntLayout>

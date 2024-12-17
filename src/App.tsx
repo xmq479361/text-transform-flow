@@ -1,7 +1,6 @@
 import { ConfigProvider, theme } from "antd";
 import Layout from "./components/Layout";
 import { useState, useEffect } from "react";
-import FlowManager from "./components/FlowManager";
 import { ProcessingFlow } from "./types";
 
 export default function App() {
@@ -9,15 +8,19 @@ export default function App() {
     const savedMode = localStorage.getItem("isDarkMode");
     return savedMode ? JSON.parse(savedMode) : true;
   });
-  const [flows, setFlows] = useState<ProcessingFlow[]>([]);
+
+  const [flows, setFlows] = useState<ProcessingFlow[]>(() => {
+    const savedFlows = localStorage.getItem("flows");
+    return savedFlows ? JSON.parse(savedFlows) : [];
+  });
 
   useEffect(() => {
     localStorage.setItem("isDarkMode", JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
   useEffect(() => {
-    localStorage.setItem("isDarkMode", JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+    localStorage.setItem("flows", JSON.stringify(flows));
+  }, [flows]);
 
   return (
     <ConfigProvider
@@ -30,8 +33,12 @@ export default function App() {
         },
       }}
     >
-      {/* <FlowManager onFlowsChange={setFlows} /> */}
-      <Layout isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+      <Layout
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        flows={flows}
+        onFlowsChange={setFlows}
+      />
     </ConfigProvider>
   );
 }

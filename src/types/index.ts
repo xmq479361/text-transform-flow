@@ -13,6 +13,7 @@ export interface ProcessingFlow {
   id: string;
   name: string;
   rules: ProcessingRule[];
+  enabled: boolean;
 }
 
 export interface EditorContent {
