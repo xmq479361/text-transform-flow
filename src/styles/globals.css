@@ -21,7 +21,7 @@
   /* Dark theme variables */
   --dark-bg-primary: #1e1e1e;
   --dark-bg-secondary: #252526;
-  --dark-text-primary: #ffffff;
+  --dark-text-primary: #ffffffd1;
   --dark-text-secondary: #cccccc;
   --dark-border: #404040;
 }
@@ -43,14 +43,11 @@
   --border-color: var(--dark-border);
 }
 
-.theme-light span,
+/* 排除指定类下的 span */
+span:not([class^="mtk"]),
 pre {
-  @apply text-black;
-}
-
-.theme-dark span,
-pre {
-  @apply text-blue-200;
+  color: var(--text-primary);
+  font-size: 12px;
 }
 
 body {
@@ -125,11 +122,23 @@ body {
   left: 0;
 }
 
+.ant-collapse-content-box {
+  padding: 0px 0px 15px 6px !important;
+}
+
 .ant-collapse-header {
   padding: 10px 4px !important;
+  line-height: 34px;
+  height: 34px;
+  align-items: center;
+}
+
+.ant-collapse-expand-icon {
+  padding-inline-end: 4px;
 }
 
 .ant-collapse-header-text {
+  line-height: 22px;
   display: inline-block;
   /* 设置为内联块 */
   white-space: nowrap;
@@ -152,6 +161,7 @@ body {
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
+  height: 45px;
 }
 
 /* 独立滚动区域 */
@@ -169,10 +179,6 @@ body {
 .theme-input:focus {
   border-color: var(--text-secondary);
   outline: none;
-}
-
-.ant-collapse-content-box {
-  padding: 0px 16px 0px 16px !important;
 }
 
 .ant-menu-dark {

@@ -53,18 +53,9 @@ export default function Sidebar({
 
   const renderRuleForm = (flow: ProcessingFlow, rule: ProcessingRule) => (
     <Form key={rule.id} layout="vertical" className="p-2">
-      <div className="flex items-center mb-2">
-        <Checkbox
-          checked={rule.enabled}
-          onChange={(e) =>
-            onRuleChange(flow.id, rule.id, { enabled: e.target.checked })
-          }
-        />
-        <span className={`ml-2`}>启用</span>
-      </div>
       <Form.Item className="mb-2">
         <Input
-          placeholder="描述"
+          placeholder="规则描述"
           value={rule.description}
           onChange={(e) =>
             onRuleChange(flow.id, rule.id, { description: e.target.value })
@@ -73,7 +64,7 @@ export default function Sidebar({
       </Form.Item>
       <Form.Item className="mb-2">
         <Input
-          placeholder="查找模式"
+          placeholder="匹配规则"
           value={rule.pattern}
           onChange={(e) =>
             onRuleChange(flow.id, rule.id, { pattern: e.target.value })
@@ -82,7 +73,7 @@ export default function Sidebar({
       </Form.Item>
       <Form.Item className="mb-2">
         <Input
-          placeholder="替换文本"
+          placeholder="替换文本(支持: $1, $2, $3, ...)"
           value={rule.replacement}
           onChange={(e) =>
             onRuleChange(flow.id, rule.id, { replacement: e.target.value })
@@ -114,9 +105,8 @@ export default function Sidebar({
   return (
     <div
       className={`w-full h-full flex flex-col`}
-      // style={{ paddingBottom: "20px" }}
     >
-      <div className="p-4">
+      <div className="panel-header">
         <Input
           placeholder="新处理流名称"
           value={newFlowName}
@@ -159,11 +149,22 @@ export default function Sidebar({
                   }
                   className="border-0"
                   extra={
-                    <DeleteOutlined
-                      onClick={() => onDeleteRule(flow.id, rule.id)}
-                      className={`cursor-pointer`}
-                      style={{ fontSize: 16 }}
-                    />
+                    <div className="flex items-center">
+                      <DeleteOutlined
+                        onClick={() => onDeleteRule(flow.id, rule.id)}
+                        className={`cursor-pointer`}
+                        style={{ fontSize: 16 }}
+                      />
+                      <Checkbox
+                        style={{ margin: "0px 5px" }}
+                        checked={rule.enabled}
+                        onChange={(e) =>
+                          onRuleChange(flow.id, rule.id, {
+                            enabled: e.target.checked,
+                          })
+                        }
+                      />
+                    </div>
                   }
                 >
                   {renderRuleForm(flow, rule)}

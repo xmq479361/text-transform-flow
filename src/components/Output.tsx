@@ -57,6 +57,6 @@ export default function Output({
     }
   }, [isRealTimeProcessing, content.text, onProcessedTextChange]);
   return (
-    <pre className={`p-4 whitespace-pre-wrap h-full`}>{processedText}</pre>
+    <pre className={`p-2 whitespace-pre-wrap h-full `}>{processedText}</pre>
   );
 }

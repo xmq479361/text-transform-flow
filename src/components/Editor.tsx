@@ -89,6 +89,7 @@ export default function Editor({
     if (!model) return;
 
     const newDecorations = highlightPatterns.flatMap((pattern) => {
+      console.log("pattern", pattern);
       if (!pattern) return [];
       try {
         const matches = model.findMatches(

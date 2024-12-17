@@ -161,7 +161,9 @@ export default function AppLayout({
         var rule = selectedFlow.rules.find((rule) => rule.id === ruleId);
         if (rule) {
           rule = { ...rule, ...updates };
-          setHighlightPatterns([rule.enabled == true ? rule.pattern : ""]);
+          var pattern = rule.enabled == true ? rule.pattern : "";
+          console.log("setHighlightPatterns", pattern);
+          setHighlightPatterns([pattern]);
         }
       }
       setSelectedFlow({
@@ -290,7 +292,6 @@ export default function AppLayout({
     setIsRealTimeProcessing(!isRealTimeProcessing);
   };
   return (
-    // <Layout className={`min-h-screen flex-row ${isDarkMode ? "dark" : ""}`}>
     <AntLayout
       className={`app-container ${isDarkMode ? "theme-dark" : "theme-light"} `}
     >
@@ -299,8 +300,8 @@ export default function AppLayout({
           width: getPixelWidth(layout.siderWidthPercent),
           height: "100%",
         }}
-        // maxWidth={getPixelWidth(siderWidthConfig.max)}
-        // minWidth={getPixelWidth(siderWidthConfig.min)}
+        maxWidth={getPixelWidth(siderWidthConfig.max)}
+        minWidth={getPixelWidth(siderWidthConfig.min)}
         onResizeStart={() => setIsResizing(true)}
         onResizeStop={(e, direction, ref, d) => {
           handleResizeStop("right", "siderWidthPercent", d.width);
@@ -324,7 +325,6 @@ export default function AppLayout({
           className={`resizable-handle right ${isResizing ? "active" : ""}`}
         />
       </Resizable>
-      {/* </Sider> */}
       <AntLayout>
         <Content className="flex flex-col h-full overflow-hidden">
           <div className="flex-1 flex flex-row h-full">
@@ -333,8 +333,8 @@ export default function AppLayout({
                 width: getPixelWidth(layout.editorWidthPercent),
                 height: "100%",
               }}
-              // maxWidth={getPixelWidth(editorWidth.max)}
-              // minWidth={getPixelWidth(editorWidth.min)}
+              maxWidth={getPixelWidth(editorWidth.max)}
+              minWidth={getPixelWidth(editorWidth.min)}
               onResizeStart={() => setIsResizing(true)}
               onResizeStop={(e, direction, ref, d) => {
                 handleResizeStop("right", "editorWidthPercent", d.width);
@@ -377,7 +377,7 @@ export default function AppLayout({
             </Resizable>
             {(editorContent.text || !isRealTimeProcessing) && (
               <div
-                className="panel"
+                className="panel flex flex-col"
                 style={{
                   width: `${getPixelWidth(layout.outputWidthPercent)}px`,
                 }}
