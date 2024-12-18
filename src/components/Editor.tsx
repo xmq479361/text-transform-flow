@@ -45,6 +45,7 @@ export default function Editor({
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [decorations, setDecorations] = useState<string[]>([]);
+  const decorationsRef = useRef<string[]>([]);
 
   const debouncedOnChange = useCallback(
     debounce((value: string) => {
@@ -71,11 +72,28 @@ export default function Editor({
         verticalScrollbarSize: 8,
         horizontalScrollbarSize: 8,
       },
+      lineNumbers: "on",
+      wordWrap: "on",
+      wrappingStrategy: "advanced",
+      fontSize: 14,
+      lineHeight: 21,
+      padding: { top: 8, bottom: 8 },
+      folding: true,
+      foldingStrategy: "indentation",
+      renderLineHighlight: "all",
+      contextmenu: true,
+      mouseWheelZoom: true,
+      quickSuggestions: true,
+      scrollBeyondLastLine: false,
     });
 
     editorRef.current.onDidChangeModelContent(() => {
       debouncedOnChange(editorRef.current?.getValue() || "");
     });
+
+    setTimeout(() => {
+      editorRef.current?.layout();
+    }, 100);
 
     return () => {
       editorRef.current?.dispose();
@@ -87,6 +105,11 @@ export default function Editor({
 
     const model = editorRef.current.getModel();
     if (!model) return;
+
+    // Clear previous decorations
+    if (decorationsRef.current.length > 0) {
+      model.deltaDecorations(decorationsRef.current, []);
+    }
 
     const newDecorations = highlightRules.flatMap((rule) => {
       console.log("pattern", rule.pattern);
@@ -112,11 +135,9 @@ export default function Editor({
         return [];
       }
     });
-
-    const decorationIds = editorRef.current.deltaDecorations(
-      decorations,
-      newDecorations
-    );
+    const decorationIds = model.deltaDecorations([], newDecorations);
+    decorationsRef.current = decorationIds;
+    console.log("decorationIds", decorationIds);
     setDecorations(decorationIds);
   }, [highlightRules, content.text]);
 

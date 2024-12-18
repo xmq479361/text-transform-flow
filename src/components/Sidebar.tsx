@@ -7,8 +7,15 @@ import {
   Checkbox,
   Button,
   message,
+  Modal,
 } from "antd";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DraggableProvided,
+  DraggableStateSnapshot,
+} from "react-beautiful-dnd";
 
 import {
   PlusOutlined,
@@ -16,7 +23,6 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { ProcessingFlow, ProcessingRule } from "../types";
-
 interface SidebarProps {
   flows: ProcessingFlow[];
   selectedFlow: ProcessingFlow | null;
@@ -118,7 +124,7 @@ export default function Sidebar({
         </Tooltip>
       </Form.Item>
       <Form.Item className="mb-2">
-        <Tooltip title="替换匹配到的文本，可以使用$1, $2等引用捕获组">
+        <Tooltip title="替换匹配到的文本，可以使用$1, $2等引用捕获组，或${{key}}[index]引用处理流数据">
           <Input
             placeholder="替换文本"
             value={rule.replacement}
@@ -158,6 +164,27 @@ export default function Sidebar({
           <span>仅提取匹配内容</span>
         </Checkbox>
       </div>
+      <div className="flex items-center mb-2">
+        <Checkbox
+          checked={rule.storeInFlow}
+          onChange={(e) =>
+            onRuleChange(flow.id, rule.id, { storeInFlow: e.target.checked })
+          }
+        >
+          <span>存入处理流</span>
+        </Checkbox>
+      </div>
+      {rule.storeInFlow && (
+        <Form.Item className="mb-2">
+          <Input
+            placeholder="处理流key, 后续通过${{key}}提取使用"
+            value={rule.flowKey}
+            onChange={(e) =>
+              onRuleChange(flow.id, rule.id, { flowKey: e.target.value })
+            }
+          />
+        </Form.Item>
+      )}
     </Form>
   );
   const onDragEnd = (result: any) => {
@@ -177,11 +204,16 @@ export default function Sidebar({
       key: rule.id,
       label: (
         <Draggable key={rule.id} draggableId={rule.id} index={index}>
-          {(provided) => (
+          {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
             <div
               ref={provided.innerRef}
               {...provided.draggableProps}
               {...provided.dragHandleProps}
+              className="w-full"
+              style={{
+                ...provided.draggableProps.style,
+                opacity: snapshot.isDragging ? 0.5 : 1,
+              }}
             >
               {getRuleSummary(rule)}
             </div>
@@ -189,14 +221,14 @@ export default function Sidebar({
         </Draggable>
       ),
       extra: (
-        <div className="flex items-center">
+        <div className="flex items-center ml-2 mr-4">
           <DeleteOutlined
             onClick={() => onDeleteRule(flow.id, rule.id)}
             className={`cursor-pointer`}
             style={{ fontSize: 16 }}
           />
           <Checkbox
-            style={{ margin: "0px 5px" }}
+            className="ml-2"
             checked={rule.enabled}
             onChange={(e) =>
               onRuleChange(flow.id, rule.id, {
@@ -222,7 +254,14 @@ export default function Sidebar({
     extra: (
       <div className="flex items-center">
         <DeleteOutlined
-          onClick={() => onFlowDelete(flow.id)}
+          onClick={() => {
+            Modal.confirm({
+              title: "确认删除",
+              content: "您确定要删除这条规则吗？",
+              onOk: () => onFlowDelete(flow.id),
+            });
+          }}
+          // onClick={() => onFlowDelete(flow.id)}
           className={`cursor-pointer`}
           style={{ fontSize: 16 }}
         />
@@ -244,7 +283,6 @@ export default function Sidebar({
             <Collapse
               accordion
               ghost
-              // activeKey={activeRuleKeys[flow.id] || []}
               onChange={(keys) => handleRuleCollapseChange(flow, keys)}
               items={ruleItems(flow)}
             />
@@ -252,7 +290,7 @@ export default function Sidebar({
             <Button
               onClick={() => onAddRule(flow.id)}
               icon={<PlusOutlined />}
-              className="w-full text-white mt-2"
+              className=" mt-2 w-3/4 ml-4"
             >
               添加规则
             </Button>

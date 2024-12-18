@@ -7,6 +7,8 @@ export interface ProcessingRule {
   global: boolean;
   extractOnly: boolean;
   caseSensitive: boolean;
+  storeInFlow: boolean;
+  flowKey: string;
 }
 
 export interface ProcessingFlow {
@@ -32,3 +34,6 @@ export interface LayoutSizes {
   outputWidthPercent: number;
 }
 
+export interface FlowDictionary {
+  [key: string]: string[];
+}

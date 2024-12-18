@@ -60,7 +60,6 @@ export default function AppLayout({
   const [selectedFlow, setSelectedFlow] = useState<ProcessingFlow | null>(
     () => {
       const savedFlow = localStorage.getItem("selectedFlow");
-
       return savedFlow ? JSON.parse(savedFlow) : null;
     }
   );
@@ -113,7 +112,7 @@ export default function AppLayout({
       flows.map((flow) => (flow.id === flowId ? { ...flow, ...updates } : flow))
     );
     if (selectedFlow && selectedFlow.id === flowId) {
-      setSelectedFlow({ ...selectedFlow, ...updates });
+      handleFlowSelect({ ...selectedFlow, ...updates });
     }
   };
 
@@ -123,9 +122,11 @@ export default function AppLayout({
 
   const handleFlowSelect = (flow: ProcessingFlow | null) => {
     setSelectedFlow(flow);
+    console.log("handleFlowSelect", flow);
     if (flow?.enabled && flow?.rules) {
       setHighlightRules(flow.rules.filter((rule) => rule.enabled));
     } else {
+      console.log("setHighlightRules null");
       setHighlightRules([]);
     }
   };
@@ -159,7 +160,7 @@ export default function AppLayout({
           setHighlightRules([rule]);
         }
       }
-      setSelectedFlow({
+      handleFlowSelect({
         ...selectedFlow,
         rules: selectedFlow.rules.map((rule) =>
           rule.id === ruleId ? { ...rule, ...updates } : rule
@@ -189,6 +190,8 @@ export default function AppLayout({
       global: true,
       extractOnly: false,
       caseSensitive: false,
+      storeInFlow: false,
+      flowKey: "",
     };
     onFlowsChange(
       flows.map((flow) =>
@@ -197,12 +200,12 @@ export default function AppLayout({
     );
     console.log("handleAddRule", flowId, newRule, selectedFlow);
     if (selectedFlow && selectedFlow.id === flowId) {
-      setSelectedFlow({
+      handleFlowSelect({
         ...selectedFlow,
         rules: [...selectedFlow.rules, newRule],
       });
     } else {
-      setSelectedFlow(null);
+      handleFlowSelect(null);
     }
     message.success("New rule added");
   };
@@ -216,7 +219,7 @@ export default function AppLayout({
       )
     );
     if (selectedFlow && selectedFlow.id === flowId) {
-      setSelectedFlow({
+      handleFlowSelect({
         ...selectedFlow,
         rules: selectedFlow.rules.filter((rule) => rule.id !== ruleId),
       });
@@ -245,7 +248,7 @@ export default function AppLayout({
       const newRules = Array.from(selectedFlow.rules);
       const [reorderedItem] = newRules.splice(startIndex, 1);
       newRules.splice(endIndex, 0, reorderedItem);
-      setSelectedFlow({
+      handleFlowSelect({
         ...selectedFlow,
         rules: newRules.map((rule, index) => ({ ...rule, order: index })),
       });
@@ -264,7 +267,7 @@ export default function AppLayout({
   };
 
   const handleResizeStop = (
-    direction: "left" | "right",
+    _direction: "left" | "right",
     panelType: keyof LayoutSizes,
     delta: number
   ) => {
@@ -360,7 +363,7 @@ export default function AppLayout({
             maxWidth={getPixelWidth(editorWidth.max)}
             minWidth={getPixelWidth(editorWidth.min)}
             onResizeStart={() => setIsResizing(true)}
-            onResizeStop={(e, _direction, _ref, d) => {
+            onResizeStop={(_e, _direction, _ref, d) => {
               handleResizeStop("right", "editorWidthPercent", d.width);
             }}
             enable={{ right: true }}
@@ -397,14 +400,15 @@ export default function AppLayout({
               className={`resizable-handle right ${isResizing ? "active" : ""}`}
             />
           </Resizable>
-          {(editorContent.text || !isRealTimeProcessing) && (
-            <div
-              className="panel flex flex-col"
-              style={{
-                width: `${getPixelWidth(layout.outputWidthPercent)}px`,
-              }}
-            >
-              <div className="panel-header p-2 flex items-center">
+
+          <div
+            className="panel flex flex-col"
+            style={{
+              width: `${getPixelWidth(layout.outputWidthPercent)}px`,
+            }}
+          >
+            <div className="panel-header p-2 flex items-center">
+              {(editorContent.text || !isRealTimeProcessing) && (
                 <Button
                   icon={<CopyOutlined />}
                   onClick={handleCopyOutput}
@@ -412,7 +416,8 @@ export default function AppLayout({
                 >
                   复制
                 </Button>
-                {/* {!isRealTimeProcessing && (
+              )}
+              {/* {!isRealTimeProcessing && (
                   <Button
                     onClick={() => setProcessedText(editorContent.text)}
                     className="theme-input ml-2"
@@ -420,17 +425,18 @@ export default function AppLayout({
                     处理
                   </Button>
                 )} */}
-              </div>
-              <div className="flex-1 scroll-container h-full overflow-x-scroll">
+            </div>
+            <div className="flex-1 scroll-container h-full overflow-x-scroll ">
+              {(editorContent.text || !isRealTimeProcessing) && (
                 <Output
                   content={editorContent}
                   flow={selectedFlow}
                   onProcessedTextChange={setProcessedText}
                   isRealTimeProcessing={isRealTimeProcessing}
                 />
-              </div>
+              )}
             </div>
-          )}
+          </div>
         </Content>
       </AntLayout>
     </AntLayout>
